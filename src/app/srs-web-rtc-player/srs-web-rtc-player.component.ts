@@ -9,142 +9,148 @@ import { FormsModule } from '@angular/forms';
   template: `
     <div class="player-container">
       <h1>📹 Player WebRTC - SRS Stream (DEBUG MODE)</h1>
-
+    
       <!-- CONFIGURAÇÃO -->
-      <div class="config-panel" *ngIf="!isPlaying">
-        <h2>Configuração do Stream</h2>
-
-        <div class="input-group">
-          <label><strong>URL WebRTC:</strong></label>
-          <textarea
-            [(ngModel)]="webrtcUrl"
-            (ngModelChange)="parseUrl()"
-            placeholder="webrtc://servidor.com/live/stream?schema=https"
-            rows="3"
-            class="input-url"
-          ></textarea>
-          <small>Cole aqui a URL completa do WebRTC</small>
+      @if (!isPlaying) {
+        <div class="config-panel">
+          <h2>Configuração do Stream</h2>
+          <div class="input-group">
+            <label><strong>URL WebRTC:</strong></label>
+            <textarea
+              [(ngModel)]="webrtcUrl"
+              (ngModelChange)="parseUrl()"
+              placeholder="webrtc://servidor.com/live/stream?schema=https"
+              rows="3"
+              class="input-url"
+            ></textarea>
+            <small>Cole aqui a URL completa do WebRTC</small>
+          </div>
+          @if (parsedUrl) {
+            <div class="url-info">
+              <h3>📊 URL Parseada:</h3>
+              <div class="info-item"><strong>Servidor:</strong> {{ parsedUrl.server }}</div>
+              <div class="info-item"><strong>Aplicação:</strong> {{ parsedUrl.app }}</div>
+              <div class="info-item"><strong>Stream:</strong> {{ parsedUrl.stream }}</div>
+              <div class="info-item"><strong>Schema:</strong> {{ parsedUrl.schema }}</div>
+              <div class="info-item"><strong>API URL:</strong> {{ parsedUrl.apiUrl }}</div>
+            </div>
+          }
+          <button (click)="startPlay()" class="btn-play" [disabled]="!webrtcUrl">
+            ▶ Iniciar Player
+          </button>
         </div>
-
-        <div class="url-info" *ngIf="parsedUrl">
-          <h3>📊 URL Parseada:</h3>
-          <div class="info-item"><strong>Servidor:</strong> {{ parsedUrl.server }}</div>
-          <div class="info-item"><strong>Aplicação:</strong> {{ parsedUrl.app }}</div>
-          <div class="info-item"><strong>Stream:</strong> {{ parsedUrl.stream }}</div>
-          <div class="info-item"><strong>Schema:</strong> {{ parsedUrl.schema }}</div>
-          <div class="info-item"><strong>API URL:</strong> {{ parsedUrl.apiUrl }}</div>
-        </div>
-
-        <button (click)="startPlay()" class="btn-play" [disabled]="!webrtcUrl">
-          ▶ Iniciar Player
-        </button>
-      </div>
-
+      }
+    
       <!-- PLAYER -->
-      <div class="video-wrapper" *ngIf="isPlaying">
-        <div class="status-bar">
-          <span class="status" [ngClass]="statusClass">
-            {{ statusMessage }}
-          </span>
-          <span class="info">{{ parsedUrl?.stream || 'Stream' }}</span>
-          <button (click)="stop()" class="btn-stop">⏹ Parar</button>
-        </div>
-
-        <!-- DIAGNÓSTICO DE VÍDEO -->
-        <div class="video-debug" *ngIf="!hasVideo">
-          <div class="warning-box">
-            <h3>⚠ Sem Vídeo Detectado</h3>
-            <div class="diagnostic">
-              <div class="diag-item"><strong>Tracks recebidos:</strong> {{ tracksReceived }}</div>
-              <div class="diag-item"><strong>Video tracks:</strong> {{ videoTracks }}</div>
-              <div class="diag-item"><strong>Audio tracks:</strong> {{ audioTracks }}</div>
-              <div class="diag-item">
-                <strong>Video element srcObject:</strong>
-                {{ videoElement?.srcObject ? 'SET' : 'NULL' }}
-              </div>
-              <div class="diag-item">
-                <strong>Video readyState:</strong>
-                {{ videoElement?.readyState }}
-              </div>
-              <div class="diag-item">
-                <strong>Video networkState:</strong>
-                {{ videoElement?.networkState }}
-              </div>
-              <div class="diag-item">
-                <strong>Video paused:</strong>
-                {{ videoElement?.paused }}
+      @if (isPlaying) {
+        <div class="video-wrapper">
+          <div class="status-bar">
+            <span class="status" [ngClass]="statusClass">
+              {{ statusMessage }}
+            </span>
+            <span class="info">{{ parsedUrl?.stream || 'Stream' }}</span>
+            <button (click)="stop()" class="btn-stop">⏹ Parar</button>
+          </div>
+          <!-- DIAGNÓSTICO DE VÍDEO -->
+          @if (!hasVideo) {
+            <div class="video-debug">
+              <div class="warning-box">
+                <h3>⚠ Sem Vídeo Detectado</h3>
+                <div class="diagnostic">
+                  <div class="diag-item"><strong>Tracks recebidos:</strong> {{ tracksReceived }}</div>
+                  <div class="diag-item"><strong>Video tracks:</strong> {{ videoTracks }}</div>
+                  <div class="diag-item"><strong>Audio tracks:</strong> {{ audioTracks }}</div>
+                  <div class="diag-item">
+                    <strong>Video element srcObject:</strong>
+                    {{ videoElement?.srcObject ? 'SET' : 'NULL' }}
+                  </div>
+                  <div class="diag-item">
+                    <strong>Video readyState:</strong>
+                    {{ videoElement?.readyState }}
+                  </div>
+                  <div class="diag-item">
+                    <strong>Video networkState:</strong>
+                    {{ videoElement?.networkState }}
+                  </div>
+                  <div class="diag-item">
+                    <strong>Video paused:</strong>
+                    {{ videoElement?.paused }}
+                  </div>
+                </div>
+                <button (click)="forceVideoPlay()" class="btn-force">🔄 Forçar Play</button>
               </div>
             </div>
-            <button (click)="forceVideoPlay()" class="btn-force">🔄 Forçar Play</button>
+          }
+          <video
+            #videoElement
+            autoplay
+            playsinline
+            [muted]="muted"
+            class="video-player"
+            (loadedmetadata)="onVideoMetadata($event)"
+            (loadeddata)="onVideoLoaded($event)"
+            (canplay)="onCanPlay($event)"
+            (play)="onVideoPlay($event)"
+            (error)="onVideoError($event)"
+          ></video>
+          <div class="controls">
+            <button (click)="toggleMute()" class="control-btn">
+              {{ muted ? '🔇' : '🔊' }} {{ muted ? 'Desmutar' : 'Mutar' }}
+            </button>
+            <button (click)="toggleFullscreen()" class="control-btn">🖥 Tela Cheia</button>
+            <button (click)="restart()" class="control-btn">🔄 Reconectar</button>
+            <button (click)="forceVideoPlay()" class="control-btn">▶ Forçar Play</button>
           </div>
         </div>
-
-        <video
-          #videoElement
-          autoplay
-          playsinline
-          [muted]="muted"
-          class="video-player"
-          (loadedmetadata)="onVideoMetadata($event)"
-          (loadeddata)="onVideoLoaded($event)"
-          (canplay)="onCanPlay($event)"
-          (play)="onVideoPlay($event)"
-          (error)="onVideoError($event)"
-        ></video>
-
-        <div class="controls">
-          <button (click)="toggleMute()" class="control-btn">
-            {{ muted ? '🔇' : '🔊' }} {{ muted ? 'Desmutar' : 'Mutar' }}
-          </button>
-          <button (click)="toggleFullscreen()" class="control-btn">🖥 Tela Cheia</button>
-          <button (click)="restart()" class="control-btn">🔄 Reconectar</button>
-          <button (click)="forceVideoPlay()" class="control-btn">▶ Forçar Play</button>
-        </div>
-      </div>
-
+      }
+    
       <!-- INFORMAÇÕES TÉCNICAS -->
-      <div class="info-panel" *ngIf="isPlaying">
-        <h3>ℹ Informações Técnicas</h3>
-        <div class="tech-info">
-          <div class="info-row">
-            <strong>Estado da Conexão:</strong>
-            <span [class.success]="connectionState === 'connected'">
-              {{ connectionState }}
-            </span>
-          </div>
-          <div class="info-row">
-            <strong>ICE State:</strong>
-            <span
+      @if (isPlaying) {
+        <div class="info-panel">
+          <h3>ℹ Informações Técnicas</h3>
+          <div class="tech-info">
+            <div class="info-row">
+              <strong>Estado da Conexão:</strong>
+              <span [class.success]="connectionState === 'connected'">
+                {{ connectionState }}
+              </span>
+            </div>
+            <div class="info-row">
+              <strong>ICE State:</strong>
+              <span
               [class.success]="
                 iceConnectionState === 'connected' || iceConnectionState === 'completed'
               "
-            >
-              {{ iceConnectionState }}
-            </span>
+                >
+                {{ iceConnectionState }}
+              </span>
+            </div>
+            <div class="info-row"><strong>Signaling State:</strong> {{ signalingState }}</div>
+            <div class="info-row"><strong>Resolução:</strong> {{ videoResolution }}</div>
+            <div class="info-row"><strong>Codec de Vídeo:</strong> {{ videoCodec }}</div>
+            <div class="info-row"><strong>Bitrate:</strong> {{ videoBitrate }}</div>
+            <div class="info-row"><strong>Frames Recebidos:</strong> {{ framesReceived }}</div>
+            <div class="info-row"><strong>Frames Decodificados:</strong> {{ framesDecoded }}</div>
+            <div class="info-row"><strong>Frames Dropados:</strong> {{ framesDropped }}</div>
           </div>
-          <div class="info-row"><strong>Signaling State:</strong> {{ signalingState }}</div>
-          <div class="info-row"><strong>Resolução:</strong> {{ videoResolution }}</div>
-          <div class="info-row"><strong>Codec de Vídeo:</strong> {{ videoCodec }}</div>
-          <div class="info-row"><strong>Bitrate:</strong> {{ videoBitrate }}</div>
-          <div class="info-row"><strong>Frames Recebidos:</strong> {{ framesReceived }}</div>
-          <div class="info-row"><strong>Frames Decodificados:</strong> {{ framesDecoded }}</div>
-          <div class="info-row"><strong>Frames Dropados:</strong> {{ framesDropped }}</div>
         </div>
-      </div>
-
+      }
+    
       <!-- SDP DEBUG -->
-      <div class="sdp-panel" *ngIf="isPlaying && showSdp">
-        <h3>📝 SDP Debug</h3>
-        <div class="sdp-section">
-          <h4>OFFER (enviado):</h4>
-          <pre>{{ localSdp }}</pre>
+      @if (isPlaying && showSdp) {
+        <div class="sdp-panel">
+          <h3>📝 SDP Debug</h3>
+          <div class="sdp-section">
+            <h4>OFFER (enviado):</h4>
+            <pre>{{ localSdp }}</pre>
+          </div>
+          <div class="sdp-section">
+            <h4>ANSWER (recebido):</h4>
+            <pre>{{ remoteSdp }}</pre>
+          </div>
         </div>
-        <div class="sdp-section">
-          <h4>ANSWER (recebido):</h4>
-          <pre>{{ remoteSdp }}</pre>
-        </div>
-      </div>
-
+      }
+    
       <!-- DEBUG LOG -->
       <div class="debug-panel">
         <div class="debug-header">
@@ -157,12 +163,14 @@ import { FormsModule } from '@angular/forms';
           </div>
         </div>
         <div class="logs">
-          <div *ngFor="let log of logs" [class]="'log-' + log.type">
-            {{ log.message }}
-          </div>
+          @for (log of logs; track log) {
+            <div [class]="'log-' + log.type">
+              {{ log.message }}
+            </div>
+          }
         </div>
       </div>
-
+    
       <!-- SOLUÇÕES COMUNS -->
       <div class="solutions-panel">
         <h3>🔧 Problemas Comuns e Soluções</h3>
@@ -191,7 +199,7 @@ import { FormsModule } from '@angular/forms';
         </details>
       </div>
     </div>
-  `,
+    `,
   styles: [
     `
       .player-container {
